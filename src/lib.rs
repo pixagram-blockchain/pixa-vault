@@ -85,8 +85,8 @@ pub fn derive_encryption_key(
         .map_err(|_| JsValue::from_str("Invalid hex salt"))?;
 
     let params = KdfParams {
-        memory_kib: memory_kib.unwrap_or(65536),
-        iterations: iterations.unwrap_or(3),
+        memory_kib: memory_kib.unwrap_or(19456),
+        iterations: iterations.unwrap_or(2),
         parallelism: 1,
         key_length: 32,
     };
@@ -116,8 +116,8 @@ pub fn generate_pin_verify_hash(
         .map_err(|_| JsValue::from_str("Invalid hex salt"))?;
 
     let params = KdfParams {
-        memory_kib: memory_kib.unwrap_or(65536),
-        iterations: iterations.unwrap_or(3),
+        memory_kib: memory_kib.unwrap_or(19456),
+        iterations: iterations.unwrap_or(2),
         parallelism: 1,
         key_length: 32,
     };
@@ -142,8 +142,8 @@ pub fn verify_pin(
         .map_err(|_| JsValue::from_str("Invalid hex salt"))?;
 
     let params = KdfParams {
-        memory_kib: memory_kib.unwrap_or(65536),
-        iterations: iterations.unwrap_or(3),
+        memory_kib: memory_kib.unwrap_or(19456),
+        iterations: iterations.unwrap_or(2),
         parallelism: 1,
         key_length: 32,
     };
@@ -233,8 +233,8 @@ pub fn seal_secret(
         .map_err(|_| JsValue::from_str("Invalid hex salt"))?;
 
     let params = KdfParams {
-        memory_kib: memory_kib.unwrap_or(65536),
-        iterations: iterations.unwrap_or(3),
+        memory_kib: memory_kib.unwrap_or(19456),
+        iterations: iterations.unwrap_or(2),
         parallelism: 1,
         key_length: 32,
     };
@@ -259,8 +259,8 @@ pub fn unseal_secret(
         .map_err(|_| JsValue::from_str("Invalid hex salt"))?;
 
     let params = KdfParams {
-        memory_kib: memory_kib.unwrap_or(65536),
-        iterations: iterations.unwrap_or(3),
+        memory_kib: memory_kib.unwrap_or(19456),
+        iterations: iterations.unwrap_or(2),
         parallelism: 1,
         key_length: 32,
     };
@@ -292,8 +292,8 @@ pub fn seal_keys(
         .map_err(|_| JsValue::from_str("Invalid hex salt"))?;
 
     let params = KdfParams {
-        memory_kib: memory_kib.unwrap_or(65536),
-        iterations: iterations.unwrap_or(3),
+        memory_kib: memory_kib.unwrap_or(19456),
+        iterations: iterations.unwrap_or(2),
         parallelism: 1,
         key_length: 32,
     };
@@ -320,8 +320,8 @@ pub fn unseal_keys(
         .map_err(|_| JsValue::from_str("Invalid hex salt"))?;
 
     let params = KdfParams {
-        memory_kib: memory_kib.unwrap_or(65536),
-        iterations: iterations.unwrap_or(3),
+        memory_kib: memory_kib.unwrap_or(19456),
+        iterations: iterations.unwrap_or(2),
         parallelism: 1,
         key_length: 32,
     };
@@ -344,8 +344,8 @@ pub fn get_vault_info() -> String {
         "cipher": "chacha20-poly1305",
         "hash": "blake3",
         "domain_sep": "hkdf-sha512",
-        "default_memory_kib": 65536,
-        "default_iterations": 3,
+        "default_memory_kib": 19456,
+        "default_iterations": 2,
         "key_size_bits": 256,
         "nonce_size_bits": 96,
         "tag_size_bits": 128,

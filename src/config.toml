@@ -1,0 +1,12 @@
+[target.wasm32-unknown-unknown]
+rustflags = [
+    # Set initial WASM linear memory to 128 MiB.
+    # Argon2id allocates m_cost KiB internally (default 19 MiB, max 64 MiB).
+    # The WASM allocator (dlmalloc) needs headroom on top of that for
+    # the hash state, stack, and Rust runtime.
+    #
+    # 128 MiB = 134217728 bytes = 2048 WASM pages (65536 bytes each).
+    # max-memory = 256 MiB allows memory.grow() up to that ceiling.
+    "-C", "link-arg=--initial-memory=134217728",
+    "-C", "link-arg=--max-memory=268435456",
+]

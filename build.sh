@@ -21,6 +21,17 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 MODE="${1:-release}"
 
+# ─── WASM Memory Configuration ───────────────────────────
+# Argon2id allocates m_cost KiB as a contiguous block inside WASM linear memory.
+# Default WASM initial memory (~1 MiB) is far too small — Argon2id will hit
+# "memory access out of bounds" on any allocation above ~700 KiB.
+#
+# initial-memory = 128 MiB (2048 pages × 64 KiB) — enough for up to ~46 MiB Argon2id + overhead
+# max-memory     = 256 MiB — allows memory.grow() up to this ceiling if autoTune picks a larger profile
+#
+# These flags are passed via RUSTFLAGS and embedded in the WASM binary at link time.
+WASM_MEMORY_FLAGS="-C link-arg=--initial-memory=134217728 -C link-arg=--max-memory=268435456"
+
 banner() {
     echo ""
     echo "╔══════════════════════════════════════════════════════╗"
@@ -33,6 +44,10 @@ banner() {
 # Build the WASM module via wasm-pack + copy JS wrapper + TypeScript types
 build_wasm() {
     local PROFILE="$1"
+
+    # Merge memory flags with any existing RUSTFLAGS
+    export RUSTFLAGS="${RUSTFLAGS:-} ${WASM_MEMORY_FLAGS}"
+    echo "▸ RUSTFLAGS: ${RUSTFLAGS}"
 
     if [[ "$PROFILE" == "dev" ]]; then
         echo "▸ Building WASM (debug)..."
@@ -60,7 +75,7 @@ build_wasm() {
         fi
     fi
 
-    # Report sizes
+    # Report sizes + verify memory configuration
     echo ""
     local WASM="pkg/pixa_vault_bg.wasm"
     if [[ -f "$WASM" ]]; then
@@ -68,6 +83,18 @@ build_wasm() {
         BYTES=$(wc -c < "$WASM")
         local KIB=$((BYTES / 1024))
         echo "  WASM binary:  ${KIB} KiB  ($WASM)"
+
+        # Verify initial memory was set correctly
+        if command -v wasm-objdump &> /dev/null; then
+            local MEM_PAGES
+            MEM_PAGES=$(wasm-objdump -h "$WASM" 2>/dev/null | grep -oP 'initial=\K[0-9]+' || echo "?")
+            local MEM_MIB=$(( MEM_PAGES * 64 / 1024 ))
+            echo "  WASM memory:  ${MEM_PAGES} pages = ${MEM_MIB} MiB initial"
+            if [[ "$MEM_PAGES" -lt 1024 ]] 2>/dev/null; then
+                echo "  ⚠ WARNING: Initial memory < 64 MiB. Argon2id may fail at runtime!"
+                echo "    Ensure RUSTFLAGS includes: ${WASM_MEMORY_FLAGS}"
+            fi
+        fi
     fi
     echo "  JS glue:      $(wc -c < pkg/pixa_vault.js | xargs) bytes"
     echo "  JS wrapper:   $(wc -c < pkg/pq-secure-vault.js | xargs) bytes"

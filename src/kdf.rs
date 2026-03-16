@@ -13,13 +13,17 @@ use crate::error::VaultError;
 ///   → ~0.5s CPU, but a single RTX 4090 can test ~500K pins/sec
 ///   → Full 6-char alphanumeric space (2.18B) cracked in ~72 minutes
 ///
-/// Argon2id (replacement): 64 MiB memory, 3 iterations
-///   → ~1s CPU/WASM, GPU needs 64 MiB per parallel lane
-///   → RTX 4090 (24GB): max ~375 parallel attempts = ~375 pins/sec
-///   → Full 6-char alphanumeric space: ~67 DAYS
-///   → With numeric-only PIN (1M combos): ~44 minutes (vs <1 sec for PBKDF2)
+/// Argon2id (default: 19 MiB, t=2):
+///   → ~0.8s in WASM, GPU needs 19 MiB per parallel lane
+///   → RTX 4090 (24GB): max ~1260 parallel attempts = ~1260 pins/sec
+///   → Full 6-char alphanumeric space: ~20 DAYS (vs 72 min for PBKDF2)
+///   → With numeric-only PIN (1M combos): ~13 minutes (vs <1 sec for PBKDF2)
 ///
-/// This is a >1000x improvement in GPU resistance for the same user wait time.
+/// autoTuneParams() will bump to 46 MiB if the device supports it:
+///   → RTX 4090: ~520 parallel attempts → ~48 DAYS for alphanumeric
+///
+/// The default 19 MiB is the OWASP minimum recommendation for Argon2id
+/// and works reliably within WASM linear memory limits.
 #[derive(Debug, Clone)]
 pub struct KdfParams {
     /// Memory cost in KiB (default: 65536 = 64 MiB)
@@ -35,8 +39,8 @@ pub struct KdfParams {
 impl Default for KdfParams {
     fn default() -> Self {
         Self {
-            memory_kib: 65536, // 64 MiB
-            iterations: 3,
+            memory_kib: 19456, // 19 MiB — OWASP minimum, safe for WASM
+            iterations: 2,
             parallelism: 1,
             key_length: 32,
         }
@@ -44,21 +48,21 @@ impl Default for KdfParams {
 }
 
 impl KdfParams {
-    /// Low-memory profile for constrained devices (16 MiB, 4 iterations)
+    /// Low-memory profile for constrained devices (9 MiB, 3 iterations)
     pub fn low_memory() -> Self {
         Self {
-            memory_kib: 16384, // 16 MiB
-            iterations: 4,
+            memory_kib: 9216, // 9 MiB
+            iterations: 3,
             parallelism: 1,
             key_length: 32,
         }
     }
 
-    /// High-security profile (128 MiB, 4 iterations)
+    /// High-security profile (46 MiB, 2 iterations)
     pub fn high_security() -> Self {
         Self {
-            memory_kib: 131072, // 128 MiB
-            iterations: 4,
+            memory_kib: 46080, // 45 MiB
+            iterations: 2,
             parallelism: 1,
             key_length: 32,
         }

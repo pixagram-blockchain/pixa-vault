@@ -24,6 +24,10 @@ let wasmLoadPromise = null;
  * Initialize the WASM module.
  * Must be called once before using any vault operations.
  *
+ * Runs a smoke test after loading: a tiny Argon2id derivation (256 KiB, t=1)
+ * to verify the WASM binary has enough linear memory. If this fails, the
+ * binary was compiled without --initial-memory and must be rebuilt.
+ *
  * @param {Function|object} initFn - The wasm-bindgen init function or pre-loaded module
  * @returns {Promise<void>}
  */
@@ -37,6 +41,21 @@ export async function initPQVault(initFn) {
         } else {
             wasmModule = initFn;
         }
+
+        // Smoke test: verify WASM memory is large enough for Argon2id.
+        // Use the absolute minimum (256 KiB, t=1) — if even this fails,
+        // the binary was built without --initial-memory=128MiB.
+        try {
+            wasmModule.deriveEncryptionKey('test', 'aa'.repeat(32), 256, 1);
+        } catch (e) {
+            wasmReady = false;
+            wasmModule = null;
+            throw new Error(
+                '[PQSecureVault] WASM memory too small for Argon2id. ' +
+                'Rebuild pixa-vault with: RUSTFLAGS="-C link-arg=--initial-memory=134217728" wasm-pack build --target web --release --out-dir pkg'
+            );
+        }
+
         wasmReady = true;
     })();
 
@@ -54,15 +73,25 @@ function requireWasm() {
 // Constants & Defaults
 // ============================================
 
-/** Default Argon2id memory cost: 64 MiB (KiB) */
-export const DEFAULT_MEMORY_KIB = 65536;
+/**
+ * Default Argon2id memory cost: 19 MiB (KiB).
+ * OWASP minimum recommendation for Argon2id.
+ *
+ * Why not 64 MiB? WASM linear memory defaults to a small initial size.
+ * Argon2id allocates m_cost bytes internally, and with dlmalloc overhead
+ * this can cause "memory access out of bounds" if the WASM module wasn't
+ * built with sufficient --initial-memory. 19 MiB works reliably across
+ * all browsers. autoTuneParams() will try higher values if the device
+ * supports them.
+ */
+export const DEFAULT_MEMORY_KIB = 19456;
 
-/** Default Argon2id iterations */
-export const DEFAULT_ITERATIONS = 3;
+/** Default Argon2id iterations (time cost) */
+export const DEFAULT_ITERATIONS = 2;
 
-/** Low-memory profile: 16 MiB, 4 iterations (for constrained devices) */
-export const LOW_MEMORY_KIB = 16384;
-export const LOW_MEMORY_ITERATIONS = 4;
+/** Low-memory profile: 9 MiB, 3 iterations (for very constrained devices) */
+export const LOW_MEMORY_KIB = 9216;
+export const LOW_MEMORY_ITERATIONS = 3;
 
 /** Vault format version (for migration detection) */
 export const VAULT_VERSION = 1;
@@ -152,10 +181,31 @@ export class PQSecureVault {
      */
     deriveKey(pin, salt) {
         const wasm = requireWasm();
-        const key = wasm.deriveEncryptionKey(pin, salt, this.memoryKib, this.iterations);
-        this._cachedEncKey = key;
-        this._cachedSalt = salt;
-        return key;
+
+        // Try with current params; fall back to lower memory on WASM OOB error
+        let mem = this.memoryKib;
+        let iter = this.iterations;
+        while (mem >= 4096) {
+            try {
+                const key = wasm.deriveEncryptionKey(pin, salt, mem, iter);
+                // If we had to fall back, persist the working params
+                if (mem !== this.memoryKib) {
+                    console.warn(`[PQSecureVault] Argon2id memory reduced: ${this.memoryKib} → ${mem} KiB (WASM limit)`);
+                    this.memoryKib = mem;
+                    this.iterations = iter;
+                }
+                this._cachedEncKey = key;
+                this._cachedSalt = salt;
+                return key;
+            } catch (e) {
+                const isOOB = /memory|out of bounds|grow|wasm/i.test(e.message || String(e));
+                if (!isOOB) throw e; // Re-throw non-memory errors
+                // Halve memory, bump iterations to compensate
+                mem = Math.floor(mem / 2);
+                iter = Math.min(iter + 1, 8);
+            }
+        }
+        throw new Error('[PQSecureVault] Argon2id failed: WASM cannot allocate enough memory. Minimum 4 MiB required.');
     }
 
     /**
@@ -410,9 +460,9 @@ export class PQSecureVault {
      */
     async autoTuneParams(targetMs = 1500) {
         const profiles = [
-            { memoryKib: 65536, iterations: 3, label: 'standard' },
-            { memoryKib: 32768, iterations: 3, label: 'medium' },
-            { memoryKib: 16384, iterations: 4, label: 'low' },
+            { memoryKib: 46080, iterations: 2, label: 'high' },
+            { memoryKib: 19456, iterations: 2, label: 'standard' },
+            { memoryKib: 9216,  iterations: 3, label: 'low' },
         ];
 
         const testPin = 'bench1';
@@ -431,7 +481,8 @@ export class PQSecureVault {
                     return { ...profile, measuredMs: Math.round(elapsed) };
                 }
             } catch (e) {
-                // Memory allocation failed — try smaller profile
+                // Memory allocation failed (WASM OOB) or timeout — try smaller profile
+                console.warn(`[PQSecureVault] autoTune: ${profile.label} (${profile.memoryKib} KiB) failed:`, e.message || e);
                 continue;
             }
         }

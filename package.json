@@ -1,6 +1,6 @@
 {
   "name": "@pixagram/pixa-vault",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Post-quantum hardened secure vault for Pixagram — Argon2id + ChaCha20-Poly1305 + BLAKE3 in Rust/WASM. Drop-in replacement for PBKDF2-based key encryption, designed for short PINs.",
   "license": "MIT",
   "author": {
@@ -76,6 +76,11 @@
   ],
 
   "scripts": {
+    "build": "./build.sh release",
+    "build:dev": "./build.sh dev",
+    "build:test": "./build.sh test",
+    "test": "./build.sh test",
+    "clean": "rm -rf pkg/ target/"
   },
 
   "engines": {
