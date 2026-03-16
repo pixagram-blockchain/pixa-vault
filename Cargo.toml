@@ -1,0 +1,57 @@
+[package]
+name = "pixa-vault"
+version = "1.0.0"
+edition = "2021"
+authors = ["Pixagram SA"]
+description = "Post-quantum hardened secure vault for Pixagram — Argon2id + ChaCha20-Poly1305 + BLAKE3"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# KDF: Memory-hard, GPU/ASIC-resistant (critical for 6-char PINs)
+argon2 = { version = "0.5", features = ["std"] }
+
+# AEAD: ChaCha20-Poly1305 (constant-time, no AES-NI dependency in WASM)
+chacha20poly1305 = "0.10"
+
+# Fast hashing for PIN verification & HKDF
+blake3 = "1.5"
+
+# HKDF for domain-separated sub-key derivation
+hkdf = "0.12"
+sha2 = "0.10"
+
+# Memory protection: zero-on-drop for secrets
+zeroize = { version = "1.7", features = ["derive"] }
+
+# WASM bindings
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+
+# Serialization for vault records
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# CSPRNG
+getrandom = { version = "0.2", features = ["js"] }
+rand = "0.8"
+
+# Error handling
+thiserror = "1.0"
+
+# Hex encoding
+hex = "0.4"
+
+# Base64 for compact transport
+base64 = "0.22"
+
+[profile.release]
+opt-level = "z"       # Size-optimize for WASM
+lto = true
+codegen-units = 1
+strip = true
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Oz --enable-bulk-memory-opt"]

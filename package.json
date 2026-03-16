@@ -1,0 +1,93 @@
+{
+  "name": "@pixagram/pixa-vault",
+  "version": "1.0.0",
+  "description": "Post-quantum hardened secure vault for Pixagram — Argon2id + ChaCha20-Poly1305 + BLAKE3 in Rust/WASM. Drop-in replacement for PBKDF2-based key encryption, designed for short PINs.",
+  "license": "MIT",
+  "author": {
+    "name": "Pixagram SA",
+    "url": "https://pixagram.io"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pixagram-blockchain/pixa-vault.git"
+  },
+  "homepage": "https://github.com/pixagram-blockchain/pixa-vault#readme",
+  "bugs": {
+    "url": "https://github.com/pixagram-blockchain/pixa-vault/issues"
+  },
+  "keywords": [
+    "vault",
+    "encryption",
+    "argon2",
+    "argon2id",
+    "chacha20",
+    "chacha20-poly1305",
+    "blake3",
+    "wasm",
+    "webassembly",
+    "post-quantum",
+    "kdf",
+    "key-derivation",
+    "pin",
+    "pbkdf2-replacement",
+    "hive",
+    "blockchain",
+    "pixagram",
+    "web3",
+    "crypto",
+    "secure-storage"
+  ],
+
+  "type": "module",
+  "sideEffects": false,
+
+  "main": "./pkg/pq-secure-vault.js",
+  "module": "./pkg/pq-secure-vault.js",
+  "types": "./pkg/pq-secure-vault.d.ts",
+
+  "exports": {
+    ".": {
+      "types": "./pkg/pq-secure-vault.d.ts",
+      "import": "./pkg/pq-secure-vault.js",
+      "default": "./pkg/pq-secure-vault.js"
+    },
+    "./wasm": {
+      "types": "./pkg/pixa_vault.d.ts",
+      "import": "./pkg/pixa_vault.js",
+      "default": "./pkg/pixa_vault.js"
+    },
+    "./migration": {
+      "import": "./js/migration-guide.js",
+      "default": "./js/migration-guide.js"
+    },
+    "./package.json": "./package.json"
+  },
+
+  "files": [
+    "pkg/pixa_vault.js",
+    "pkg/pixa_vault.d.ts",
+    "pkg/pixa_vault_bg.wasm",
+    "pkg/pixa_vault_bg.wasm.d.ts",
+    "pkg/pq-secure-vault.js",
+    "pkg/pq-secure-vault.d.ts",
+    "js/migration-guide.js",
+    "README.md",
+    "LICENSE"
+  ],
+
+  "scripts": {
+  },
+
+  "engines": {
+    "node": ">=18.0.0"
+  },
+
+  "peerDependencies": {},
+  "dependencies": {},
+  "devDependencies": {},
+
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}
